@@ -5,7 +5,7 @@ use env_logger::Env;
 use log::{error, info};
 use std::path::PathBuf;
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use signal_hook::consts::signal::*;
@@ -14,6 +14,7 @@ use signal_hook::flag;
 mod config;
 mod discord;
 mod monitor;
+mod process;
 
 fn main() {
     // Set up command-line interface
@@ -117,20 +118,52 @@ fn main() {
 
     info!("Starting Ghostty RPC daemon (refresh interval: {}ms)...", interval_ms);
 
+    let mut ghostty_was_running = true;
+    let mut last_process_check: Option<Instant> = None;
+    let process_check_interval = Duration::from_secs(1);
+
     loop {
-        // Read current terminal activity
-        let state = monitor::get_terminal_state(&config);
+        if config.general.clear_when_closed {
+            let check_due = match last_process_check {
+                Some(last) => last.elapsed() >= process_check_interval,
+                None => true,
+            };
 
-        // Update Discord Rich Presence
-        discord_rpc.update_state(&state);
+            if check_due {
+                last_process_check = Some(Instant::now());
+                let ghostty_running = process::is_ghostty_running();
 
-        // Log update summary
-        log::debug!(
-            "Updated Discord RPC -> Cmd: '{}' | CWD: '{}' | Git: {}",
-            state.command,
-            state.display_cwd,
-            state.git_branch.as_deref().unwrap_or("none")
-        );
+                match process::presence_action(ghostty_running, ghostty_was_running) {
+                    process::PresenceAction::Clear => {
+                        log::debug!("Ghostty closed, clearing presence");
+                        discord_rpc.clear_activity();
+                    }
+                    process::PresenceAction::Resume => {
+                        log::debug!("Ghostty detected, resuming presence");
+                    }
+                    process::PresenceAction::None => {}
+                }
+
+                ghostty_was_running = ghostty_running;
+            }
+        }
+
+        // Only update presence while Ghostty is running (or when the feature is disabled)
+        if !config.general.clear_when_closed || ghostty_was_running {
+            // Read current terminal activity
+            let state = monitor::get_terminal_state(&config);
+
+            // Update Discord Rich Presence
+            discord_rpc.update_state(&state);
+
+            // Log update summary
+            log::debug!(
+                "Updated Discord RPC -> Cmd: '{}' | CWD: '{}' | Git: {}",
+                state.command,
+                state.display_cwd,
+                state.git_branch.as_deref().unwrap_or("none")
+            );
+        }
 
         if term.load(Ordering::Relaxed) || matches.get_flag("once") {
             if term.load(Ordering::Relaxed) {

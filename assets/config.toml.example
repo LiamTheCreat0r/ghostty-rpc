@@ -16,6 +16,9 @@ show_git_branch = true
 # Inactivity threshold in seconds before marking state as "Idle in terminal"
 idle_threshold_secs = 300
 
+# Clear Discord presence when Ghostty is not running
+clear_when_closed = true
+
 # Blacklisted commands to censor from Discord presence for privacy
 blacklist_commands = ["sudo", "ssh", "op", "bw", "pass"]
 
