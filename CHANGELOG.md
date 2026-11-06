@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 - Initial development phase.
+- Fix daemon silently wedging (process alive, presence frozen) after Discord quits or restarts: a watchdog now exits the process when the main loop stalls for 30s so launchd/systemd restarts it.
+- README: launchd example now sets `ThrottleInterval` and log paths.
 
 ## [0.1.0] - 2023-10-01
 ### Added
