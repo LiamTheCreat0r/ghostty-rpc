@@ -5,8 +5,8 @@ use env_logger::Env;
 use log::{error, info};
 use std::path::PathBuf;
 use std::thread;
-use std::time::{Duration, Instant};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use signal_hook::consts::signal::*;
 use signal_hook::flag;
@@ -15,6 +15,38 @@ mod config;
 mod discord;
 mod monitor;
 mod process;
+
+/// If the main loop makes no progress for this long, the daemon is considered
+/// wedged and exits so the service manager (launchd/systemd) restarts it.
+const WATCHDOG_TIMEOUT_SECS: u64 = 30;
+
+fn now_secs() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+/// Spawns a watchdog thread.
+///
+/// The Discord client can wedge permanently: when Discord quits or its IPC
+/// socket goes stale, the library's connection thread exits while the client
+/// still reports ready, so `set_activity` blocks forever waiting for a reply.
+/// The process then stays alive (so `KeepAlive` never triggers) but never
+/// updates presence again. Exiting lets the service manager start a clean one.
+fn spawn_watchdog(heartbeat: Arc<AtomicU64>) {
+    thread::spawn(move || loop {
+        thread::sleep(Duration::from_secs(5));
+        let idle = now_secs().saturating_sub(heartbeat.load(Ordering::Relaxed));
+        if idle >= WATCHDOG_TIMEOUT_SECS {
+            error!(
+                "Main loop unresponsive for {}s (Discord connection likely lost); exiting so the service manager restarts the daemon.",
+                idle
+            );
+            std::process::exit(1);
+        }
+    });
+}
 
 fn main() {
     // Set up command-line interface
@@ -118,11 +150,18 @@ fn main() {
 
     info!("Starting Ghostty RPC daemon (refresh interval: {}ms)...", interval_ms);
 
+    let heartbeat = Arc::new(AtomicU64::new(now_secs()));
+    if !matches.get_flag("once") {
+        spawn_watchdog(Arc::clone(&heartbeat));
+    }
+
     let mut ghostty_was_running = true;
     let mut last_process_check: Option<Instant> = None;
     let process_check_interval = Duration::from_secs(1);
 
     loop {
+        heartbeat.store(now_secs(), Ordering::Relaxed);
+
         if config.general.clear_when_closed {
             let check_due = match last_process_check {
                 Some(last) => last.elapsed() >= process_check_interval,
