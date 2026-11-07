@@ -28,6 +28,9 @@ pub struct GeneralConfig {
     #[serde(default = "default_idle_threshold")]
     pub idle_threshold_secs: u64,
 
+    #[serde(default = "default_clear_when_closed")]
+    pub clear_when_closed: bool,
+
     #[serde(default)]
     pub exclude: Vec<String>,
 
@@ -52,6 +55,7 @@ fn default_show_directory() -> bool { true }
 fn default_path_display_mode() -> String { "folder_only".to_string() }
 fn default_show_git_branch() -> bool { true }
 fn default_idle_threshold() -> u64 { 300 }
+fn default_clear_when_closed() -> bool { true }
 fn default_large_image() -> String { "ghostty".to_string() }
 fn default_small_image() -> String { "terminal".to_string() }
 
@@ -65,6 +69,7 @@ impl Default for Config {
                 path_display_mode: default_path_display_mode(),
                 show_git_branch: default_show_git_branch(),
                 idle_threshold_secs: default_idle_threshold(),
+                clear_when_closed: default_clear_when_closed(),
                 exclude: Vec::new(),
                 blacklist_commands: vec![
                     "sudo".to_string(),

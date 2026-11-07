@@ -74,4 +74,11 @@ impl DiscordRpc {
             }
         }
     }
+
+    /// Clears the current Discord Rich Presence activity.
+    pub fn clear_activity(&mut self) {
+        if let Err(e) = self.client.clear_activity() {
+            log::debug!("Failed to clear Discord activity: {}", e);
+        }
+    }
 }

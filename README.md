@@ -10,6 +10,7 @@ Ghostty RPC is a fast, Rust-based application that integrates with Discord's Ric
 - **Git Branch & Repository Awareness**: Auto-detects Git repositories and active branch names (`git: main 🌿`).
 - **Dynamic Tool Icons**: Maps command names to Discord small image asset keys.
 - **Smart Idle Detection**: Automatically switches status to "Idle in terminal" after custom inactivity thresholds.
+- **Presence Auto-Clear**: Clears Discord presence when Ghostty exits and resumes automatically when it reopens.
 - **Privacy & Censor Filters**: Redacts sensitive commands (`sudo`, `ssh`, `op`, `bw`) and supports path display modes (`folder_only`, `full`, `hidden`).
 - **Shell Integration Hooks**: Shell hook generator (`ghostty-rpc --install-hooks`) for Zsh, Bash, Fish, and Nushell.
 - **Official Logo Assets**: Included high-resolution SVG and 512x512 PNG Ghostty logo assets in `assets/`.
@@ -77,6 +78,7 @@ show_directory = true
 path_display_mode = "folder_only"   # "folder_only", "full", or "hidden"
 show_git_branch = true
 idle_threshold_secs = 300
+clear_when_closed = true            # Clear presence while Ghostty is not running
 blacklist_commands = ["sudo", "ssh", "op", "bw", "pass"]
 large_image = "ghostty"
 small_image = "terminal"
@@ -95,6 +97,41 @@ systemctl --user start ghostty-rpc.service
 
 # Check service status
 systemctl --user status ghostty-rpc.service
+```
+
+### macOS (launchd)
+
+Create `~/Library/LaunchAgents/com.ghostty-rpc.plist`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.ghostty-rpc</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/ghostty-rpc</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+</dict>
+</plist>
+```
+
+Adjust the `ProgramArguments` path if `ghostty-rpc` is installed elsewhere, then load the agent:
+
+```bash
+launchctl load ~/Library/LaunchAgents/com.ghostty-rpc.plist
+```
+
+To stop and unload it:
+
+```bash
+launchctl unload ~/Library/LaunchAgents/com.ghostty-rpc.plist
 ```
 
 ---
