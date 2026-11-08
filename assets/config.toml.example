@@ -1,7 +1,9 @@
 # Ghostty RPC Configuration File (~/.config/ghostty-rpc/config.toml)
 
 [general]
-# Refresh interval in seconds for Discord Rich Presence updates
+# Refresh interval in seconds for Discord Rich Presence updates (decimals allowed, e.g. 0.5).
+# Alternatively set `refresh_interval_ms`, which takes precedence. Minimum is 100ms.
+# Note: Discord itself throttles presence updates to roughly one every 4 seconds.
 refresh_interval = 5
 
 # Show current working directory in status

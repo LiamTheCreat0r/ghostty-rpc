@@ -6,6 +6,11 @@
 - Initial development phase.
 - Fix daemon silently wedging (process alive, presence frozen) after Discord quits or restarts: a watchdog now exits the process when the main loop stalls for 30s so launchd/systemd restarts it.
 - README: launchd example now sets `ThrottleInterval` and log paths.
+- Fix `refresh_interval` in the config file having no effect:
+  - The config is now read from `~/.config/ghostty-rpc/config.toml` (or `$XDG_CONFIG_HOME`) on all platforms as documented; on macOS it was previously only read from `~/Library/Application Support/com.your_name.ghostty-rpc/`, which is still used as a fallback.
+  - The documented `refresh_interval` key (seconds) is now honored; `refresh_interval_ms` is accepted as an override. Values are clamped to a 100ms minimum.
+  - Config parse errors are now logged instead of silently falling back to defaults, and the loaded config path is logged at startup.
+- Skip sending unchanged presence to Discord (re-sent every 15s as a keepalive) to stay under Discord's rate limit, so real changes appear sooner.
 
 ## [0.1.0] - 2023-10-01
 ### Added

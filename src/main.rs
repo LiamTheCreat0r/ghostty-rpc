@@ -79,7 +79,7 @@ fn main() {
                 .short('i')
                 .long("interval")
                 .value_name("SECONDS")
-                .help("Update refresh interval in seconds"),
+                .help("Update refresh interval in seconds (fractional allowed, e.g. 0.5)"),
         )
         .arg(
             Arg::new("status")
@@ -145,8 +145,10 @@ fn main() {
     // Daemon loop
     let interval_ms = matches
         .get_one::<String>("interval")
-        .and_then(|s| s.parse::<f64>().ok().map(|sec| (sec * 1000.0) as u64))
-        .unwrap_or(config.general.refresh_interval_ms);
+        .and_then(|s| s.parse::<f64>().ok())
+        .filter(|sec| sec.is_finite() && *sec >= 0.0)
+        .map(|sec| ((sec * 1000.0) as u64).max(100))
+        .unwrap_or_else(|| config.general.refresh_interval_ms());
 
     info!("Starting Ghostty RPC daemon (refresh interval: {}ms)...", interval_ms);
 

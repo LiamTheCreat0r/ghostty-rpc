@@ -61,7 +61,7 @@ ghostty-rpc [OPTIONS]
 - `-c, --config <FILE>`: Specify path to a custom configuration TOML file.
 - `-d, --debug`: Enable verbose debug logging.
 - `-o, --once`: Run presence update once and exit.
-- `-i, --interval <SECS>`: Set refresh update interval in seconds.
+- `-i, --interval <SECS>`: Set refresh update interval in seconds (decimals allowed, e.g. `0.5`). Overrides the config file.
 - `--status`: Print current detected Ghostty terminal status and exit.
 - `--install-hooks`: Print shell integration hook scripts.
 
@@ -69,11 +69,11 @@ ghostty-rpc [OPTIONS]
 
 ## Configuration
 
-Configuration file is located at `~/.config/ghostty-rpc/config.toml`. See [assets/config.toml.example](assets/config.toml.example).
+Configuration file is located at `~/.config/ghostty-rpc/config.toml` (or `$XDG_CONFIG_HOME/ghostty-rpc/config.toml`) on all platforms, including macOS. See [assets/config.toml.example](assets/config.toml.example).
 
 ```toml
 [general]
-refresh_interval = 5
+refresh_interval = 5                # Seconds (decimals allowed); or use refresh_interval_ms
 show_directory = true
 path_display_mode = "folder_only"   # "folder_only", "full", or "hidden"
 show_git_branch = true
@@ -83,6 +83,8 @@ blacklist_commands = ["sudo", "ssh", "op", "bw", "pass"]
 large_image = "ghostty"
 small_image = "terminal"
 ```
+
+> Discord rate-limits Rich Presence updates (about 5 per 20 seconds), so visible changes may lag a few seconds behind even with a short `refresh_interval`. Unchanged presence is not re-sent, so real changes go through as fast as Discord allows.
 
 ---
 
